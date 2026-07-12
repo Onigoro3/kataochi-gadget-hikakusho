@@ -1,0 +1,58 @@
+name: Daily Auto Post (Angel - 型落ちガジェット比較所)
+
+# 毎日 JST 10:00 に自動実行(UTC 1:00 = JST 10:00)。
+# Dragon(型落ち家電ラボ, JST 9:00)と実行時刻をずらし、部署対抗上の実行タイミングの
+# 混同・依存を避ける。実行時刻はGitHub Actionsのベストエフォートのため数分〜のズレが生じ得る点に留意。
+on:
+  schedule:
+    - cron: "0 1 * * *"
+  workflow_dispatch: {}  # 手動実行・動作確認用
+
+permissions:
+  contents: write  # トピック使用済みマーク・価格履歴データをリポジトリへコミットするため
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run auto-post pipeline
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL: claude-sonnet-5
+          HATENA_ID: ${{ secrets.HATENA_ID }}
+          HATENA_BLOG_DOMAIN: ${{ secrets.HATENA_BLOG_DOMAIN }}
+          HATENA_API_KEY: ${{ secrets.HATENA_API_KEY }}
+          YAHOO_CLIENT_ID: ${{ secrets.YAHOO_CLIENT_ID }}
+          VC_AFFILIATE_ID: ${{ secrets.VC_AFFILIATE_ID }}
+        run: python main.py
+
+      # 実行失敗時の通知拡張ポイント:
+      # ここに「if: failure()」ステップを追加し、Discord Webhook等へ通知するステップを
+      # 挟むと、実行失敗をGitHub Actionsのログ以外でも即座に検知できるようになる。
+      # 例:
+      # - name: Notify failure to Discord
+      #   if: failure()
+      #   run: |
+      #     curl -H "Content-Type: application/json" \
+      #       -d '{"content":"Angel Daily Auto Post が失敗しました。Actionsログを確認してください。"}' \
+      #       ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+      - name: Commit updated topic queue / price history
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/topics.json data/price_history.json
+          git diff --cached --quiet || git commit -m "chore: update topic queue / price history [skip ci]"
+          git push

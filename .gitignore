@@ -1,0 +1,20 @@
+# 秘密情報
+.env
+*.env
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+
+# ログ
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

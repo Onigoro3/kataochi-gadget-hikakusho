@@ -1,0 +1,135 @@
+[
+  {
+    "id": "smartphone",
+    "title": "型落ちスマートフォン比較(iPhone・Android旧モデル vs 最新モデル)",
+    "category": "スマートフォン",
+    "search_queries": [
+      "iPhone 型落ち",
+      "Android スマートフォン SIMフリー"
+    ],
+    "used": false,
+    "used_at": null
+  },
+  {
+    "id": "wireless-earbuds",
+    "title": "型落ちワイヤレスイヤホン比較(AirPods・Sony旧モデル vs 最新モデル)",
+    "category": "オーディオ",
+    "search_queries": [
+      "AirPods 完全ワイヤレスイヤホン",
+      "ソニー ワイヤレスイヤホン ノイズキャンセリング"
+    ],
+    "used": false,
+    "used_at": null
+  },
+  {
+    "id": "smartwatch",
+    "title": "型落ちスマートウォッチ比較(Apple Watch・Galaxy Watch旧モデル vs 最新モデル)",
+    "category": "ウェアラブル",
+    "search_queries": [
+      "Apple Watch 型落ち",
+      "Galaxy Watch スマートウォッチ"
+    ],
+    "used": false,
+    "used_at": null
+  },
+  {
+    "id": "tablet",
+    "title": "型落ちタブレット比較(iPad・Android旧モデル vs 最新モデル)",
+    "category": "タブレット",
+    "search_queries": [
+      "iPad 型落ち 旧モデル",
+      "Android タブレット 10インチ"
+    ],
+    "used": false,
+    "used_at": null
+  },
+  {
+    "id": "laptop",
+    "title": "型落ちノートPC比較(MacBook・Windows旧モデル vs 最新モデル)",
+    "category": "パソコン",
+    "search_queries": [
+      "MacBook Air 型落ち",
+      "ノートパソコン 軽量 Windows"
+    ],
+    "used": false,
+    "used_at": null
+  },
+  {
+    "id": "digital-camera",
+    "title": "型落ちミラーレス一眼比較(SONY・Canon旧モデル vs 最新モデル)",
+    "category": "カメラ",
+    "search_queries": [
+      "SONY ミラーレス一眼 型落ち",
+      "Canon EOS ミラーレスカメラ"
+    ],
+    "used": false,
+    "used_at": null
+  },
+  {
+    "id": "gaming-monitor",
+    "title": "型落ちゲーミングモニター比較(旧モデル vs 最新リフレッシュレートモデル)",
+    "category": "PC周辺機器",
+    "search_queries": [
+      "ゲーミングモニター 144Hz",
+      "ゲーミングモニター 27インチ 型落ち"
+    ],
+    "used": true,
+    "used_at": "2026-07-12T22:10:33+00:00",
+    "use_count": 1
+  },
+  {
+    "id": "mobile-battery",
+    "title": "型落ちモバイルバッテリー比較(Anker旧モデル vs 最新モデル)",
+    "category": "PC周辺機器",
+    "search_queries": [
+      "Anker モバイルバッテリー 大容量",
+      "モバイルバッテリー 20000mAh"
+    ],
+    "used": false,
+    "used_at": null
+  },
+  {
+    "id": "smart-speaker",
+    "title": "型落ちスマートスピーカー比較(Amazon Echo・Google Nest旧モデル vs 最新モデル)",
+    "category": "スマートホーム",
+    "search_queries": [
+      "Amazon Echo スマートスピーカー",
+      "Google Nest スピーカー"
+    ],
+    "used": false,
+    "used_at": null
+  },
+  {
+    "id": "drive-recorder",
+    "title": "型落ちドライブレコーダー比較(前後2カメラ旧モデル vs 最新モデル)",
+    "category": "カー用品",
+    "search_queries": [
+      "ドライブレコーダー 前後2カメラ",
+      "ドライブレコーダー 4K"
+    ],
+    "used": false,
+    "used_at": null
+  },
+  {
+    "id": "projector",
+    "title": "型落ちモバイルプロジェクター比較(旧モデル vs 最新モデル)",
+    "category": "映像機器",
+    "search_queries": [
+      "モバイルプロジェクター 小型",
+      "ホームプロジェクター 家庭用"
+    ],
+    "used": false,
+    "used_at": null
+  },
+  {
+    "id": "e-reader",
+    "title": "型落ち電子書籍リーダー比較(Kindle旧モデル vs 最新モデル)",
+    "category": "電子書籍",
+    "search_queries": [
+      "Kindle Paperwhite 電子書籍リーダー",
+      "電子書籍リーダー 防水"
+    ],
+    "used": false,
+    "used_at": null
+  }
+]
