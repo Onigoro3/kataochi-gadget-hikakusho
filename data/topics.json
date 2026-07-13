@@ -18,8 +18,9 @@
       "AirPods 完全ワイヤレスイヤホン",
       "ソニー ワイヤレスイヤホン ノイズキャンセリング"
     ],
-    "used": false,
-    "used_at": null
+    "used": true,
+    "used_at": "2026-07-13T04:37:31+00:00",
+    "use_count": 1
   },
   {
     "id": "smartwatch",
