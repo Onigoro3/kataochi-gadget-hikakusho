@@ -58,7 +58,7 @@ def trend_note(history: dict[str, list[dict[str, Any]]], item_code: str, current
     """商品ごとの価格推移についての短い注記テキストを生成する。"""
     entries = history.get(item_code, [])
     if len(entries) < 2:
-        return "今回の記事から価格追跡を開始しました。"
+        return ""
 
     previous = entries[-2]["price"]
     if current_price < previous:

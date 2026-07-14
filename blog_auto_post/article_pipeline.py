@@ -27,6 +27,10 @@ MAX_TOKENS_REVIEW = 8192
 FINAL_BODY_MARKER = "### FINAL_BODY"
 
 
+class TruncatedResponseError(RuntimeError):
+    """Claude APIの応答がmax_tokens上限で打ち切られた場合に送出する。"""
+
+
 @dataclass
 class ArticleDraft:
     outline: str
@@ -63,9 +67,14 @@ class ArticlePipeline:
             system=system,
             messages=[{"role": "user", "content": user_content}],
         )
-        return "".join(
+        text = "".join(
             block.text for block in resp.content if getattr(block, "type", "") == "text"
         ).strip()
+        if resp.stop_reason == "max_tokens":
+            raise TruncatedResponseError(
+                f"応答がmax_tokens={max_tokens}で打ち切られました: {text!r}"
+            )
+        return text
 
     # ------------------------------------------------------------------
     # ① アウトライン生成
@@ -184,7 +193,15 @@ Markdownの見出しリスト形式で出力してください。各見出しに
 TITLE: (32文字前後のタイトル)
 META: (110〜120文字程度のメタディスクリプション)
 """
-        raw = self._call(system, user, MAX_TOKENS_TITLE)
+        try:
+            raw = self._call(system, user, MAX_TOKENS_TITLE)
+        except TruncatedResponseError:
+            # 前置きの説明文等で出力が長くなりmax_tokensで打ち切られたケース。
+            # 上限を上げて1回だけ再試行し、それでも打ち切られたらフォールバックへ委ねる。
+            try:
+                raw = self._call(system, user, MAX_TOKENS_TITLE * 2)
+            except TruncatedResponseError:
+                raw = ""
 
         title = topic_title
         meta = ""
@@ -194,6 +211,10 @@ META: (110〜120文字程度のメタディスクリプション)
                 title = line[len("TITLE:"):].strip()
             elif line.startswith("META:"):
                 meta = line[len("META:"):].strip()
+
+        # タイトル途中切れバグ対策: 極端に短い(=生成途中で切れた)場合はtopic_titleへフォールバック
+        if len(title) < 10:
+            title = topic_title
         return title, meta
 
     # ------------------------------------------------------------------

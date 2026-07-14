@@ -1,5 +1,16 @@
 [
   {
+    "id": "digital-camera",
+    "title": "型落ちミラーレス一眼比較(SONY・Canon旧モデル vs 最新モデル)",
+    "category": "カメラ",
+    "search_queries": [
+      "SONY ミラーレス一眼 型落ち",
+      "Canon EOS ミラーレスカメラ"
+    ],
+    "used": false,
+    "used_at": null
+  },
+  {
     "id": "smartphone",
     "title": "型落ちスマートフォン比較(iPhone・Android旧モデル vs 最新モデル)",
     "category": "スマートフォン",
@@ -50,17 +61,6 @@
     "search_queries": [
       "MacBook Air 型落ち",
       "ノートパソコン 軽量 Windows"
-    ],
-    "used": false,
-    "used_at": null
-  },
-  {
-    "id": "digital-camera",
-    "title": "型落ちミラーレス一眼比較(SONY・Canon旧モデル vs 最新モデル)",
-    "category": "カメラ",
-    "search_queries": [
-      "SONY ミラーレス一眼 型落ち",
-      "Canon EOS ミラーレスカメラ"
     ],
     "used": false,
     "used_at": null

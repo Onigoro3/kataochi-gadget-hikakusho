@@ -3,9 +3,9 @@
 認証情報・秘密情報はすべてここを経由して環境変数から取得する。
 コード中にAPIキー等を直接書き込むことは禁止(README参照)。
 
-Dragon(app/blog_auto_post/config.py)とほぼ同一構造だが、データソースが
-楽天ウェブサービスではなくYahoo!ショッピングAPIである点、およびアフィリエイトIDが
-バリューコマース経由(VC_AFFILIATE_ID、Week2以降のASP審査通過まで空文字運用)である点が異なる。
+2026-07-14、社長判断によりデータソースをYahoo!ショッピングAPIから楽天市場API
+(Dragonと同一)へ切り替え。DragonとAngelが同じ楽天データで直接対決する構成になった
+(差別化はトピックの切り口=白物家電 vs デジタルガジェットで担保)。
 """
 from __future__ import annotations
 
@@ -35,17 +35,19 @@ class Settings:
     hatena_blog_domain: str
     hatena_api_key: str
 
-    yahoo_client_id: str
-    vc_affiliate_id: str  # バリューコマース提携前は空文字(通常URLのまま運用)
+    rakuten_app_id: str
+    rakuten_access_key: str
+    rakuten_affiliate_id: str
 
 
-# VC_AFFILIATE_ID は提携前は空文字運用のため必須変数には含めない(README参照)。
 REQUIRED_ENV_VARS = [
     "ANTHROPIC_API_KEY",
     "HATENA_ID",
     "HATENA_BLOG_DOMAIN",
     "HATENA_API_KEY",
-    "YAHOO_CLIENT_ID",
+    "RAKUTEN_APP_ID",
+    "RAKUTEN_ACCESS_KEY",
+    "RAKUTEN_AFFILIATE_ID",
 ]
 
 
@@ -65,6 +67,7 @@ def load_settings() -> Settings:
         hatena_id=os.environ["HATENA_ID"],
         hatena_blog_domain=os.environ["HATENA_BLOG_DOMAIN"],
         hatena_api_key=os.environ["HATENA_API_KEY"],
-        yahoo_client_id=os.environ["YAHOO_CLIENT_ID"],
-        vc_affiliate_id=os.environ.get("VC_AFFILIATE_ID", ""),
+        rakuten_app_id=os.environ["RAKUTEN_APP_ID"],
+        rakuten_access_key=os.environ["RAKUTEN_ACCESS_KEY"],
+        rakuten_affiliate_id=os.environ["RAKUTEN_AFFILIATE_ID"],
     )

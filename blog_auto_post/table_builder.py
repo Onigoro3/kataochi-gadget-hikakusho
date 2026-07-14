@@ -1,13 +1,12 @@
-"""比較表(HTML)・クレジット表示・免責文言の組み立て。
+"""比較表(HTML)の組み立て。
 
-価格・型番・スペック等の実データはLLMに生成させず、Yahoo!ショッピングAPIから取得した値を
+価格・型番・スペック等の実データはLLMに生成させず、楽天APIから取得した値を
 そのままコードで整形する(ハルシネーション防止・数値の正確性担保のため)。
 LLMにはこの完成済みHTMLブロックを記事内の適切な位置に挿入させる形で連携する。
 
-Dragon(app/blog_auto_post/table_builder.py)の `build_comparison_table_html()` は
-無改修で流用(yahoo_client.py側で楽天版と同一の内部スキーマへ正規化済みのため)。
-`build_disclaimer_html()` は文言をYahoo!ショッピングAPI向けに調整。
-`build_credit_html()` はAngel独自の追加(Yahoo!デベロッパーネットワークのクレジット表示義務対応)。
+2026-07-14、データソースをYahoo!ショッピングAPIから楽天市場APIへ切り替えたのに伴い、
+Dragon(app/blog_auto_post/table_builder.py)と完全に同一の実装へ揃えた(Yahoo!クレジット
+表示・楽天補助リンクは不要になったため撤去)。
 """
 from __future__ import annotations
 
@@ -37,6 +36,7 @@ def build_comparison_table_html(
         buy_score = p.get("buy_score", "-")
         judgment = escape(str(p.get("judgment", "-")))
         note = escape(trend_notes.get(p.get("item_code", ""), ""))
+        note_html = f"<br><small>{note}</small>" if note else ""
 
         image_html = (
             f'<img src="{image_url}" alt="{name}" loading="lazy" '
@@ -49,7 +49,7 @@ def build_comparison_table_html(
             "<tr>"
             f"<td>{image_html}</td>"
             f'<td><a href="{url}" target="_blank" rel="nofollow noopener">{name}</a>'
-            f"<br><small>{note}</small></td>"
+            f"{note_html}</td>"
             f"<td>{price_text}<br><small>{shop}</small></td>"
             f"<td>★{review_avg:.1f}({review_count:,}件)</td>"
             f"<td>{buy_score} / 100<br><strong>{judgment}</strong></td>"
@@ -68,44 +68,13 @@ def build_comparison_table_html(
 
 
 def build_disclaimer_html(fetched_at_jst: str) -> str:
-    """価格・在庫情報の取得日時の明記 + アフィリエイト開示文(景品表示法対応)。
-
-    バリューコマース未提携(VC_AFFILIATE_ID未設定)の間は通常URLでのリンクのみのため、
-    厳密には「アフィリエイトプログラムを利用しており」の一文はまだ事実と異なるが、
-    景品表示法上の開示は「将来的に収益が発生しうる可能性のある記事」であることを
-    早期から明示しておく方が安全側であるためこのまま出力する(実害なし)。
-    """
+    """価格・在庫情報の取得日時の明記 + アフィリエイト開示文(景品表示法対応)。"""
     return (
         "<hr>"
         '<p style="font-size:0.85em;color:#666;">'
-        f"※価格・レビュー件数等の情報は {escape(fetched_at_jst)} 時点でYahoo!ショッピングAPI経由により"
-        "取得したものです。実際の価格・在庫状況は変動する場合があるため、購入前に必ず商品ページで"
-        "ご確認ください。<br>"
-        "本記事はアフィリエイトプログラム(バリューコマース等)の利用を予定しており、記事内リンクを"
-        "経由して商品が購入された場合、当サイトが紹介料を受け取ることがあります。"
+        f"※価格・レビュー件数等の情報は {escape(fetched_at_jst)} 時点で楽天市場API経由により取得したものです。"
+        "実際の価格・在庫状況は変動する場合があるため、購入前に必ず商品ページでご確認ください。<br>"
+        "本記事は楽天アフィリエイトプログラムを利用しており、記事内リンクを経由して商品が購入された場合、"
+        "当サイトが紹介料を受け取ることがあります。"
         "</p>"
-    )
-
-
-def build_credit_html() -> str:
-    """Yahoo!デベロッパーネットワークのクレジット表示(義務表示)。
-
-    出典・確認済み文言: angel/developer/tasks.md の
-    「## 秘書によるクレジット表示文言の確認 [2026-07-13]」参照
-    (https://developer.yahoo.co.jp/attribution/)。
-
-    形式A(日本語テキストリンク)の公式HTMLソースをそのまま使用(改変禁止のため
-    style属性・リンク先URL・文言は一切変更しないこと)。
-
-    配置ルール(公式規定): 「サイトの下部」に1箇所あればよい。本関数はサイト全体
-    フッター(はてなブログのデザイン設定側HTML、社長作業)への設置を主目的とするが、
-    念のための二重化として記事本文末尾にも挿入できるよう関数化してある
-    (developer/tasks.md記載の通り、二重設置自体は規約違反ではない)。
-    """
-    return (
-        "\n<!-- Begin Yahoo! JAPAN Web Services Attribution Snippet -->\n"
-        '<span style="margin:15px 15px 15px 15px">'
-        '<a href="https://developer.yahoo.co.jp/sitemap/">Webサービス by Yahoo! JAPAN</a>'
-        "</span>\n"
-        "<!-- End Yahoo! JAPAN Web Services Attribution Snippet -->\n"
     )
