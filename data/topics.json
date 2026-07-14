@@ -52,8 +52,9 @@
       "MacBook Air 型落ち",
       "ノートパソコン 軽量 Windows"
     ],
-    "used": false,
-    "used_at": null
+    "used": true,
+    "used_at": "2026-07-14T04:10:19+00:00",
+    "use_count": 1
   },
   {
     "id": "digital-camera",
