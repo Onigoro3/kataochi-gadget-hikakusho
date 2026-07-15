@@ -12,6 +12,7 @@ Dragon(app/blog_auto_post/article_pipeline.py)と同一の4段階構成・API呼
 """
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
 from typing import Any
 
@@ -60,7 +61,13 @@ class ArticlePipeline:
         self._client = anthropic.Anthropic(api_key=api_key)
         self._model = model
 
-    def _call(self, system: str, user_content: str, max_tokens: int) -> str:
+    def _call(
+        self,
+        system: str,
+        user_content: str,
+        max_tokens: int,
+        raise_on_truncation: bool = False,
+    ) -> str:
         resp = self._client.messages.create(
             model=self._model,
             max_tokens=max_tokens,
@@ -71,8 +78,18 @@ class ArticlePipeline:
             block.text for block in resp.content if getattr(block, "type", "") == "text"
         ).strip()
         if resp.stop_reason == "max_tokens":
-            raise TruncatedResponseError(
-                f"応答がmax_tokens={max_tokens}で打ち切られました: {text!r}"
+            if raise_on_truncation:
+                # タイトル生成のように短く構造化された出力を期待する箇所でのみ送出する。
+                # 呼び出し側でmax_tokensを引き上げて再試行 or フォールバックする。
+                raise TruncatedResponseError(
+                    f"応答がmax_tokens={max_tokens}で打ち切られました: {text!r}"
+                )
+            # 本文・アウトライン・自己レビューのような長文生成では、打ち切られても
+            # 例外にしてパイプライン全体を落とす(=その日の投稿がゼロになる)より、
+            # 多少短い記事を出す方が安全なため、警告のみ出して打ち切られたテキストを返す。
+            print(
+                f"::warning::応答がmax_tokens={max_tokens}で打ち切られました(処理は継続)",
+                file=sys.stderr,
             )
         return text
 
@@ -194,12 +211,14 @@ TITLE: (32文字前後のタイトル)
 META: (110〜120文字程度のメタディスクリプション)
 """
         try:
-            raw = self._call(system, user, MAX_TOKENS_TITLE)
+            raw = self._call(system, user, MAX_TOKENS_TITLE, raise_on_truncation=True)
         except TruncatedResponseError:
             # 前置きの説明文等で出力が長くなりmax_tokensで打ち切られたケース。
             # 上限を上げて1回だけ再試行し、それでも打ち切られたらフォールバックへ委ねる。
             try:
-                raw = self._call(system, user, MAX_TOKENS_TITLE * 2)
+                raw = self._call(
+                    system, user, MAX_TOKENS_TITLE * 2, raise_on_truncation=True
+                )
             except TruncatedResponseError:
                 raw = ""
 
