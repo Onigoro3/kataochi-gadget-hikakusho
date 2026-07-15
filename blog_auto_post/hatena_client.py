@@ -98,15 +98,22 @@ def post_entry(
         "X-WSSE": _build_wsse_header(hatena_id, api_key),
     }
 
-    resp = requests.post(
-        endpoint, data=xml_body.encode("utf-8"), headers=headers, timeout=timeout
-    )
-
-    if resp.status_code == 429:
-        time.sleep(3)
+    try:
         resp = requests.post(
             endpoint, data=xml_body.encode("utf-8"), headers=headers, timeout=timeout
         )
+
+        if resp.status_code == 429:
+            # レート制限。少し待って1回だけリトライ(rakuten_client.pyと同様の設計)。
+            time.sleep(3)
+            resp = requests.post(
+                endpoint, data=xml_body.encode("utf-8"), headers=headers, timeout=timeout
+            )
+    except requests.exceptions.RequestException as e:
+        # タイムアウト・接続エラー等のネットワーク例外もHatenaAPIErrorとして統一する
+        # (2026-07-15修正: 従来はここが未捕捉のためrequestsの生例外がそのまま呼び出し元へ
+        # 漏れており、rakuten_client.pyの接続エラー処理と非対称だった)
+        raise HatenaAPIError(f"はてなブログAPIへの接続に失敗しました: {e}") from e
 
     if resp.status_code not in (200, 201):
         raise HatenaAPIError(

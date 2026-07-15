@@ -17,6 +17,13 @@ Dragon(app/main.py, 型落ち家電ラボ)と同一のデータソース(楽天A
 拡張ポイント(将来対応時にコメントを参照):
 - エラー通知: 現状はログ出力のみ。Discord Webhook等を追加する場合は
   `notify_failure()` を実装して except節から呼び出す形にする。
+
+ドライラン: 環境変数 `ANGEL_DRY_RUN=true` を設定すると、はてなブログへの実投稿・
+topics.json/price_history.jsonへの書き込みの両方を行わず、投稿予定内容を標準出力に
+表示するだけに留める(2026-07-15修正: 従来はpost_entry()のみスキップし、mark_used()/
+save_history()は無条件実行されていたため、ドライラン実行のたびに本番の使用済み
+トピック・価格履歴が意図せず書き換わってしまう問題があった。過去に手動でgit checkoutして
+復旧させた実績あり(本ファイル過去の記録参照)。dry_run時は保存処理ごとスキップするよう修正)。
 """
 from __future__ import annotations
 
@@ -24,6 +31,15 @@ import os
 import sys
 import traceback
 from datetime import datetime, timedelta, timezone
+
+# Windowsのローカルコンソール(既定cp932)では、価格表記の「¥」等一部の記号を含む
+# 日本語print文でUnicodeEncodeErrorが発生することが確認されている(Demonで先行対応済み、
+# 2026-07-15 SA全体点検のローカル動作確認でAngelでも同様の潜在リスクを確認)。標準出力/
+# エラー出力をUTF-8に固定して回避する(GitHub Actions実行時(Linux, 既定UTF-8)には
+# 影響しない安全な変更)。
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 from blog_auto_post import price_history, topics
 from blog_auto_post.article_pipeline import ArticlePipeline
@@ -124,26 +140,27 @@ def main() -> int:
             f"https://{settings.hatena_blog_domain}/entry/"
             f"{datetime.now(JST).strftime('%Y/%m/%d/%H%M%S')}"
         )
-        print("[main] === ANGEL_DRY_RUN=true: post_entry() は実行していません(実際には投稿されません) ===")
+        print("[main] === ANGEL_DRY_RUN=true: post_entry()・データ保存は実行していません(本番未反映) ===")
         print(f"[main] 投稿予定タイトル: {draft.title!r}")
         print(f"[main] 投稿予定本文冒頭(200文字): {final_html[:200]!r}")
         print(f"[main] 投稿予定URL(推定・実際の値は投稿後に確定): {dry_run_url}")
         print(f"[main] 投稿予定カテゴリ: {[topic['category'], '型落ちガジェット比較']}")
-    else:
-        try:
-            result = post_entry(
-                hatena_id=settings.hatena_id,
-                blog_domain=settings.hatena_blog_domain,
-                api_key=settings.hatena_api_key,
-                title=draft.title,
-                content_html=final_html,
-                categories=[topic["category"], "型落ちガジェット比較"],
-                draft=False,  # 社長方針: 最初から完全自動公開
-            )
-            print(f"[main] はてなブログ投稿成功: {result.get('location')}")
-        except Exception as e:  # HatenaAPIError含む予期せぬ例外も安全に捕捉する
-            notify_failure("hatena_post", e)
-            return 1
+        return 0
+
+    try:
+        result = post_entry(
+            hatena_id=settings.hatena_id,
+            blog_domain=settings.hatena_blog_domain,
+            api_key=settings.hatena_api_key,
+            title=draft.title,
+            content_html=final_html,
+            categories=[topic["category"], "型落ちガジェット比較"],
+            draft=False,  # 社長方針: 最初から完全自動公開
+        )
+        print(f"[main] はてなブログ投稿成功: {result.get('location')}")
+    except Exception as e:  # HatenaAPIError含む予期せぬ例外も安全に捕捉する
+        notify_failure("hatena_post", e)
+        return 1
 
     # 7. トピック使用済みマーク・価格履歴の保存 -------------------------------
     topics.mark_used(topic["id"], all_topics)

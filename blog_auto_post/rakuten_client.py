@@ -112,7 +112,15 @@ def search_items(
             f"楽天API呼び出し失敗 status={resp.status_code} query={query!r} body={resp.text[:300]}"
         )
 
-    data = resp.json()
+    try:
+        data = resp.json()
+    except ValueError as e:
+        # status=200なのに不正なJSONが返るごく稀なケース(メンテナンス中の異常応答等)。
+        # fetch_products_for_topic側はRakutenAPIErrorのみを捕捉して1クエリ失敗として
+        # スキップする設計のため、ここで変換しておかないと予期しない例外が伝播してしまう。
+        raise RakutenAPIError(
+            f"楽天APIの応答がJSONとして解釈できません query={query!r} body={resp.text[:300]}: {e}"
+        ) from e
     if "error" in data:
         raise RakutenAPIError(
             f"楽天APIエラー query={query!r} error={data.get('error')} "
