@@ -7,8 +7,9 @@
       "SONY ミラーレス一眼 型落ち",
       "Canon EOS ミラーレスカメラ"
     ],
-    "used": false,
-    "used_at": null
+    "used": true,
+    "used_at": "2026-07-15T04:12:23+00:00",
+    "use_count": 1
   },
   {
     "id": "smartphone",
