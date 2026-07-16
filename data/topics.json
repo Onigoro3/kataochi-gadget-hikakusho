@@ -1,5 +1,16 @@
 [
   {
+    "id": "tablet",
+    "title": "型落ちタブレット比較(iPad・Android旧モデル vs 最新モデル)",
+    "category": "タブレット",
+    "search_queries": [
+      "iPad 型落ち 旧モデル",
+      "Android タブレット 10インチ"
+    ],
+    "used": false,
+    "used_at": null
+  },
+  {
     "id": "digital-camera",
     "title": "型落ちミラーレス一眼比較(SONY・Canon旧モデル vs 最新モデル)",
     "category": "カメラ",
@@ -42,17 +53,6 @@
     "search_queries": [
       "Apple Watch 型落ち",
       "Galaxy Watch スマートウォッチ"
-    ],
-    "used": false,
-    "used_at": null
-  },
-  {
-    "id": "tablet",
-    "title": "型落ちタブレット比較(iPad・Android旧モデル vs 最新モデル)",
-    "category": "タブレット",
-    "search_queries": [
-      "iPad 型落ち 旧モデル",
-      "Android タブレット 10インチ"
     ],
     "used": false,
     "used_at": null
