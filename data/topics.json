@@ -7,8 +7,9 @@
       "iPad 型落ち 旧モデル",
       "Android タブレット 10インチ"
     ],
-    "used": false,
-    "used_at": null
+    "used": true,
+    "used_at": "2026-07-16T04:18:36+00:00",
+    "use_count": 1
   },
   {
     "id": "digital-camera",
