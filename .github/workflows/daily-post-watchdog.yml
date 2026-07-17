@@ -1,0 +1,49 @@
+name: Daily Post Watchdog
+
+# daily-post.yml(型落ちガジェット比較所、JST 10:05予定)は「1日1回だけ」の実行を
+# 想定した設計だが、GitHub Actionsのscheduled workflowは高負荷時に数時間遅延・
+# 最悪サイレントスキップされることがある(2026-07-15/16/17と3日連続で発生、
+# Dragon/Angel/Demon全部署で確認済み。公式ドキュメントでも明記されている既知の問題)。
+#
+# この watchdog は JST 14:00(UTC 5:00、本来の予定時刻から4時間近いバッファ)時点で
+# 本日分の成功実行が1件も無ければ自動でworkflow_dispatchして自己修復する。
+# 人間/Claudeによる手動介入を不要にすることで、2026-07-16に発生した「手動実行後に
+# 遅延していた本来のスケジュールも発火し二重投稿になる」事故の温床を無くすのが狙い。
+#
+# 実際に二重に発火しても、main.py側に実装済みの「本日投稿済みならスキップ」ガードが
+# 最終防衛線として機能する。
+on:
+  schedule:
+    - cron: "0 5 * * *"
+  workflow_dispatch: {}  # 手動実行・動作確認用
+
+permissions:
+  actions: write  # 対象ワークフローの実行履歴取得・workflow_dispatchのため
+  contents: read
+
+jobs:
+  check-and-recover:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check today's runs and recover if missing
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          WF="daily-post.yml"
+          TODAY=$(TZ=Asia/Tokyo date +%Y-%m-%d)
+          FOUND=0
+          for ts in $(gh run list --repo "$GITHUB_REPOSITORY" --workflow="$WF" --limit 20 \
+              --json conclusion,createdAt --jq '.[] | select(.conclusion=="success") | .createdAt'); do
+            d=$(TZ=Asia/Tokyo date -d "$ts" +%Y-%m-%d)
+            if [ "$d" = "$TODAY" ]; then
+              FOUND=1
+              break
+            fi
+          done
+
+          if [ "$FOUND" -eq 1 ]; then
+            echo "本日($TODAY JST)の $WF 成功実行を確認済み。何もしません"
+          else
+            echo "::warning::本日($TODAY JST)分の $WF 成功実行が見つかりません。自動リカバリでworkflow_dispatchします"
+            gh workflow run "$WF" --repo "$GITHUB_REPOSITORY"
+          fi

@@ -1,33 +1,32 @@
 """価格推移データの蓄積・参照。
 
 Yahoo!ショッピングAPIも過去の価格履歴を提供しないため、本スクリプトを実行するたびに
-data/price_history.json へ商品コード単位で価格スナップショットを追記していく。
-GitHub Actions側でこのファイルをコミットして永続化することで、運用を重ねるほど
-「価格推移データ」という差別化要素の精度が上がっていく設計。
+Supabase(sa_state, key="angel_price_history")へ商品コード単位で価格スナップショットを
+追記していく。運用を重ねるほど「価格推移データ」という差別化要素の精度が上がって
+いく設計。
 
 Dragon(app/blog_auto_post/price_history.py)と完全に同一のロジック(移植のみ、無改修)。
+
+2026-07-17: 従来はdata/price_history.jsonをGitHub Actionsがgit commitして永続化
+していたが、push競合のリスクを避けるためSupabaseへ移行した
+(sa_common.supabase_store参照)。
 """
 from __future__ import annotations
 
-import json
 from datetime import date
-from pathlib import Path
 from typing import Any
 
-DEFAULT_HISTORY_PATH = Path(__file__).resolve().parent.parent / "data" / "price_history.json"
+from sa_common.supabase_store import get_state, set_state
+
+STATE_KEY = "angel_price_history"
 
 
-def load_history(path: Path = DEFAULT_HISTORY_PATH) -> dict[str, list[dict[str, Any]]]:
-    if not path.exists():
-        return {}
-    with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
+def load_history() -> dict[str, list[dict[str, Any]]]:
+    return get_state(STATE_KEY, {})
 
 
-def save_history(history: dict[str, list[dict[str, Any]]], path: Path = DEFAULT_HISTORY_PATH) -> None:
-    with path.open("w", encoding="utf-8") as f:
-        json.dump(history, f, ensure_ascii=False, indent=2)
-        f.write("\n")
+def save_history(history: dict[str, list[dict[str, Any]]]) -> None:
+    set_state(STATE_KEY, history)
 
 
 def update_history(

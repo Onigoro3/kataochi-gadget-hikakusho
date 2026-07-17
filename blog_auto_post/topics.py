@@ -1,20 +1,25 @@
 """トピックキュー管理。
 
-data/topics.json を読み書きし、未使用トピックを1件選んで使用済みにマークする。
-全トピックを使い切った場合は自動的に全件を未使用へリセットして再利用する
-(トピック数が限られるPoCのため。将来的にはトピック追加 or 動的生成で拡張する拡張ポイント)。
+Supabase(sa_state, key="angel_topics")を読み書きし、未使用トピックを1件選んで
+使用済みにマークする。全トピックを使い切った場合は自動的に全件を未使用へ
+リセットして再利用する(トピック数が限られるPoCのため。将来的にはトピック追加
+or 動的生成で拡張する拡張ポイント)。
 
 Dragon(app/blog_auto_post/topics.py)と完全に同一のロジック(移植のみ、無改修)。
-トピックの中身(data/topics.json)のみAngel独自(型落ちガジェット)。
+トピックの中身(旧data/topics.json)のみAngel独自(型落ちガジェット)。
+
+2026-07-17: 従来はdata/topics.jsonをGitHub Actionsがgit commitして永続化していたが、
+他ワークフローの自動commitや手動pushとの競合(non-fast-forward)で記録が失われる
+事故が発生したため、Supabaseへ移行した(sa_common.supabase_store参照)。
 """
 from __future__ import annotations
 
-import json
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
 
-DEFAULT_TOPICS_PATH = Path(__file__).resolve().parent.parent / "data" / "topics.json"
+from sa_common.supabase_store import get_state, set_state
+
+STATE_KEY = "angel_topics"
 
 
 class TopicQueueError(RuntimeError):
@@ -25,23 +30,20 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
-def load_topics(path: Path = DEFAULT_TOPICS_PATH) -> list[dict[str, Any]]:
-    if not path.exists():
-        raise TopicQueueError(f"トピックファイルが見つかりません: {path}")
-    with path.open("r", encoding="utf-8") as f:
-        data = json.load(f)
+def load_topics() -> list[dict[str, Any]]:
+    data = get_state(STATE_KEY, None)
+    if data is None:
+        raise TopicQueueError(f"Supabaseにトピックデータが見つかりません(key={STATE_KEY})")
     if not isinstance(data, list):
-        raise TopicQueueError("topics.json の形式が不正です(トップレベルはリストである必要があります)")
+        raise TopicQueueError("topicsデータの形式が不正です(トップレベルはリストである必要があります)")
     return data
 
 
-def save_topics(topics: list[dict[str, Any]], path: Path = DEFAULT_TOPICS_PATH) -> None:
-    with path.open("w", encoding="utf-8") as f:
-        json.dump(topics, f, ensure_ascii=False, indent=2)
-        f.write("\n")
+def save_topics(topics: list[dict[str, Any]]) -> None:
+    set_state(STATE_KEY, topics)
 
 
-def pick_topic(path: Path = DEFAULT_TOPICS_PATH) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def pick_topic() -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """未使用トピックをキュー順(配列の先頭)で1件選ぶ。全件使用済みなら全件リセットしてから選ぶ。
 
     編集会議がトピックを配列の先頭へ移動させることで次回投稿を制御できるよう、
@@ -49,7 +51,7 @@ def pick_topic(path: Path = DEFAULT_TOPICS_PATH) -> tuple[dict[str, Any], list[d
 
     Returns: (選ばれたトピック, 全トピックリスト(まだ使用済みマーク前))
     """
-    topics = load_topics(path)
+    topics = load_topics()
     unused = [t for t in topics if not t.get("used", False)]
 
     if not unused:
@@ -63,7 +65,7 @@ def pick_topic(path: Path = DEFAULT_TOPICS_PATH) -> tuple[dict[str, Any], list[d
     return chosen, topics
 
 
-def mark_used(topic_id: str, topics: list[dict[str, Any]], path: Path = DEFAULT_TOPICS_PATH) -> None:
+def mark_used(topic_id: str, topics: list[dict[str, Any]]) -> None:
     for t in topics:
         if t.get("id") == topic_id:
             t["used"] = True
@@ -72,4 +74,4 @@ def mark_used(topic_id: str, topics: list[dict[str, Any]], path: Path = DEFAULT_
             break
     else:
         raise TopicQueueError(f"トピックID {topic_id} が見つかりません")
-    save_topics(topics, path)
+    save_topics(topics)
