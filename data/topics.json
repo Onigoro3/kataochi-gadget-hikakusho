@@ -1,5 +1,16 @@
 [
   {
+    "id": "mobile-battery",
+    "title": "型落ちモバイルバッテリー比較(Anker旧モデル vs 最新モデル)",
+    "category": "PC周辺機器",
+    "search_queries": [
+      "Anker モバイルバッテリー 大容量",
+      "モバイルバッテリー 20000mAh"
+    ],
+    "used": false,
+    "used_at": null
+  },
+  {
     "id": "tablet",
     "title": "型落ちタブレット比較(iPad・Android旧モデル vs 最新モデル)",
     "category": "タブレット",
@@ -82,17 +93,6 @@
     "used": true,
     "used_at": "2026-07-12T22:10:33+00:00",
     "use_count": 1
-  },
-  {
-    "id": "mobile-battery",
-    "title": "型落ちモバイルバッテリー比較(Anker旧モデル vs 最新モデル)",
-    "category": "PC周辺機器",
-    "search_queries": [
-      "Anker モバイルバッテリー 大容量",
-      "モバイルバッテリー 20000mAh"
-    ],
-    "used": false,
-    "used_at": null
   },
   {
     "id": "smart-speaker",
