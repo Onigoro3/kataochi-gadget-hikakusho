@@ -55,8 +55,9 @@
       "Apple Watch 型落ち",
       "Galaxy Watch スマートウォッチ"
     ],
-    "used": false,
-    "used_at": null
+    "used": true,
+    "used_at": "2026-07-17T02:26:01+00:00",
+    "use_count": 1
   },
   {
     "id": "laptop",
