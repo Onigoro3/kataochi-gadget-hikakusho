@@ -56,6 +56,30 @@ from blog_auto_post.table_builder import (
 JST = timezone(timedelta(hours=9))
 
 
+def _already_posted_today(all_topics: list, now_jst: datetime) -> bool:
+    """本日(JST)分の投稿が既にあるかどうかを判定する。
+
+    2026-07-16、Dragon(app/main.py)でGitHub Actionsのスケジュール実行遅延を
+    手動workflow_dispatchで補ったところ、後から遅延していたスケジュール実行も
+    発火し、同日に記事が2本投稿される事故が発生した(Angel/Demonでも同日に同型の
+    事故が実際に発生していたことを2026-07-17に確認)。再発防止のため、トピックの
+    使用済み日時(JST換算)が本日と一致するものが1件でもあれば、それ以降の実行は
+    投稿をスキップする。
+    """
+    today = now_jst.date()
+    for t in all_topics:
+        used_at = t.get("used_at")
+        if not used_at:
+            continue
+        try:
+            used_dt = datetime.fromisoformat(used_at)
+        except ValueError:
+            continue
+        if used_dt.astimezone(JST).date() == today:
+            return True
+    return False
+
+
 def notify_failure(stage: str, error: Exception) -> None:
     """失敗時の通知処理。
 
@@ -77,10 +101,19 @@ def main() -> int:
     # 1. トピック選択 ----------------------------------------------------
     try:
         topic, all_topics = topics.pick_topic()
-        print(f"[main] 選定トピック: {topic['title']} (id={topic['id']})")
     except Exception as e:
         notify_failure("topic_selection", e)
         return 1
+
+    now_jst = datetime.now(JST)
+    if _already_posted_today(all_topics, now_jst):
+        print(
+            f"[main] 本日({now_jst:%Y-%m-%d} JST)は既に投稿済みのため、今回の実行はスキップします"
+            "(スケジュール遅延と手動実行が重なった場合の二重投稿防止ガード)"
+        )
+        return 0
+
+    print(f"[main] 選定トピック: {topic['title']} (id={topic['id']})")
 
     # 2. 楽天API商品データ取得 --------------------------------------------
     try:
