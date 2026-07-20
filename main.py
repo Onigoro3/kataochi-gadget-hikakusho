@@ -41,10 +41,11 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-from blog_auto_post import price_history, topics
+from blog_auto_post import pexels_client, price_history, topics
 from blog_auto_post.article_pipeline import ArticlePipeline
 from blog_auto_post.config import ConfigError, load_settings
 from blog_auto_post.hatena_client import HatenaAPIError, post_entry
+from blog_auto_post.image_enrichment import insert_eyecatch, insert_theme_image_before_first_h2
 from blog_auto_post.rakuten_client import RakutenAPIError, fetch_products_for_topic
 from blog_auto_post.scoring import compute_scores
 from blog_auto_post.table_builder import (
@@ -151,19 +152,43 @@ def main() -> int:
         notify_failure("article_generation", e)
         return 1
 
-    # 5. 比較表・免責文言の組み込み ------------------------------------------
+    # 5. 画像挿入(アイキャッチ+テーマ画像、2026-07-20追加) --------------------------
+    # last_minute_hotel_navi/main.py(Dragonリポジトリ)と同じ設計をAngelへ横展開。
+    # PEXELS_API_KEY未設定・API障害時は例外を出さず本文をそのまま返す設計のため、
+    # ここで個別にtry/exceptする必要はない(image_enrichment.py参照)。
+    body_with_images = draft.body_html
+    if settings.pexels_api_key:
+        theme_query = pipeline.translate_theme_query(topic["title"], topic["category"])
+        theme_photo = (
+            pexels_client.search_photo(theme_query, settings.pexels_api_key)
+            if theme_query
+            else None
+        )
+        body_with_images = insert_theme_image_before_first_h2(
+            body_with_images, theme_photo, topic["title"]
+        )
+    # アイキャッチ: 独自スコア(buy_score)1位商品の画像をそのまま本文冒頭へ挿入する
+    # (追加のAPI連携不要。はてなブログは本文中の最初の画像を自動でアイキャッチに採用する
+    # 仕様のため、これだけでサムネイル設定が完了する)。
+    top_product = max(products, key=lambda p: p.get("buy_score", 0)) if products else None
+    if top_product and top_product.get("image_url"):
+        body_with_images = insert_eyecatch(
+            body_with_images, top_product["image_url"], top_product.get("name", "")
+        )
+
+    # 6. 比較表・免責文言の組み込み ------------------------------------------
     fetched_at_jst = datetime.now(JST).strftime("%Y-%m-%d %H:%M JST")
     table_html = build_comparison_table_html(products, trend_notes)
     disclaimer_html = build_disclaimer_html(fetched_at_jst)
 
-    final_html = draft.body_html.replace(PRODUCT_TABLE_PLACEHOLDER, table_html)
+    final_html = body_with_images.replace(PRODUCT_TABLE_PLACEHOLDER, table_html)
     if draft.meta_description:
         final_html = (
             f'<p style="display:none">{draft.meta_description}</p>\n' + final_html
         )
     final_html += disclaimer_html
 
-    # 6. はてなブログへ投稿(完全自動公開) -----------------------------------
+    # 7. はてなブログへ投稿(完全自動公開) -----------------------------------
     # 環境変数 ANGEL_DRY_RUN=true (または 1/yes) が設定されている場合のみ、実際の投稿を
     # 行わず投稿予定内容を標準出力に表示するだけに留める(2026-07-13 実機検証時に導入)。
     # 未設定(デフォルト)の場合は通常通り post_entry() を実行して本番公開する。
@@ -195,7 +220,7 @@ def main() -> int:
         notify_failure("hatena_post", e)
         return 1
 
-    # 7. トピック使用済みマーク・価格履歴の保存 -------------------------------
+    # 8. トピック使用済みマーク・価格履歴の保存 -------------------------------
     topics.mark_used(topic["id"], all_topics)
     price_history.save_history(history)
     print("[main] トピック使用済みマーク・価格履歴保存 完了")

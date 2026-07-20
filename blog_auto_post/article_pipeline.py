@@ -24,6 +24,7 @@ MAX_TOKENS_OUTLINE = 1536
 MAX_TOKENS_BODY = 8192
 MAX_TOKENS_TITLE = 512
 MAX_TOKENS_REVIEW = 8192
+MAX_TOKENS_TRANSLATE = 256
 
 FINAL_BODY_MARKER = "### FINAL_BODY"
 
@@ -288,6 +289,44 @@ META: (110〜120文字程度のメタディスクリプション)
             final_body = final_body + f"\n{PRODUCT_TABLE_PLACEHOLDER}\n"
 
         return final_body, notes
+
+    # ------------------------------------------------------------------
+    # テーマ画像(Pexels)検索クエリの英語変換
+    # ------------------------------------------------------------------
+    def translate_theme_query(self, topic_title: str, category: str) -> str:
+        """記事テーマ(トピック名+カテゴリ)を、Pexels検索用の英語クエリへ変換する。
+
+        2026-07-20実機確認(last_minute_hotel_navi/article_pipeline.py.translate_spot_names()と
+        同じ教訓): Pexelsは日本語クエリのままだと無関係な画像がヒットしやすい一方、英語の
+        一般名詞クエリではほぼ正確にヒットする。具体的な商品名・型番ではなく「そのジャンルの
+        ガジェットが写った一般的な写真」が見つかる検索語を1つだけ返させる。
+        """
+        system = (
+            "あなたはガジェット比較記事のテーマに合う、ストックフォト検索サービスで"
+            "最もヒットしやすい英語の検索クエリを考える専門家です。"
+        )
+        user = f"""以下はガジェット比較記事のトピック名とカテゴリです。この記事のテーマ画像として
+自然な、Pexelsのようなストックフォトサービスでヒットしやすい英語の検索クエリを1つだけ
+考えてください(特定の商品名・ブランド名・型番ではなく、そのジャンルのガジェットが写った
+一般的な写真が見つかる検索語にすること)。
+
+トピック: {topic_title}
+カテゴリ: {category}
+
+出力形式は厳密に英語の検索クエリ1行のみ(他の説明文は一切出力しないこと):
+"""
+        try:
+            raw = self._call(system, user, MAX_TOKENS_TRANSLATE)
+        except Exception:
+            # 翻訳に失敗しても記事生成全体は止めない(呼び出し側でテーマ画像挿入を
+            # スキップするだけで継続できる)
+            return ""
+
+        for line in raw.splitlines():
+            line = line.strip().strip("`").strip('"').strip()
+            if line:
+                return line
+        return ""
 
     # ------------------------------------------------------------------
     def run(self, topic_title: str, category: str, products: list[dict[str, Any]]) -> ArticleDraft:
