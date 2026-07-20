@@ -57,12 +57,19 @@ def build_comparison_table_html(
         )
 
     table_html = (
-        '<table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse;width:100%;">'
+        # 【2026-07-20修正】スマホ幅で全列が無理やり圧縮され、商品名セルが1文字ずつ
+        # 改行される問題が実機で見つかった。横スクロール可能なdivで囲み、tableに
+        # min-widthを設定することで、狭い画面では列を圧縮する代わりに横スクロールさせる
+        # (Dragon/Demon/hotel_naviと共通の修正)。
+        '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">'
+        '<table border="1" cellspacing="0" cellpadding="6" '
+        'style="border-collapse:collapse;width:100%;min-width:640px;">'
         "<thead><tr>"
         "<th>画像</th><th>商品名</th><th>価格</th><th>レビュー</th><th>買い時スコア</th>"
         "</tr></thead>"
         f"<tbody>{''.join(rows)}</tbody>"
         "</table>"
+        "</div>"
     )
     return table_html
 
