@@ -17,9 +17,14 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from sa_common.production_gate import filter_topics_by_gate
 from sa_common.supabase_store import get_state, set_state
 
 STATE_KEY = "angel_topics"
+
+# 【2026-07-23社長承認・ceo/tasks.md 論点4】Angelは「商材カテゴリ競合度仮説」の
+# 対照群として現状維持(寄せない)に割り当てられた。Dragon/Venusのようなprice_tier
+# 優先並べ替えはAngelには追加しない(意図的な無変更)。
 
 
 class TopicQueueError(RuntimeError):
@@ -43,11 +48,19 @@ def save_topics(topics: list[dict[str, Any]]) -> None:
     set_state(STATE_KEY, topics)
 
 
-def pick_topic() -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def pick_topic(index_rate: float | None = None) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """未使用トピックをキュー順(配列の先頭)で1件選ぶ。全件使用済みなら全件リセットしてから選ぶ。
 
     編集会議がトピックを配列の先頭へ移動させることで次回投稿を制御できるよう、
     ランダム選択ではなく配列順を尊重する(旧: random.choice(unused))。
+
+    2026-07-23社長承認: 全社共通「量産ゲート」(論点6)を適用する。index_rateが
+    閾値未満なら、直近使用された記事型と異なるトピックのみに絞り込んでから
+    配列先頭を選ぶ(sa_common.production_gate参照)。
+
+    Args:
+        index_rate: 週次URL Inspection実測の自部署インデックス率(0.0〜1.0)。
+            Noneの場合(週次検査未実施・取得失敗)は量産ゲートを効かせない。
 
     Returns: (選ばれたトピック, 全トピックリスト(まだ使用済みマーク前))
     """
@@ -60,6 +73,8 @@ def pick_topic() -> tuple[dict[str, Any], list[dict[str, Any]]]:
             t["used"] = False
             t["used_at"] = None
         unused = topics
+
+    unused = filter_topics_by_gate(unused, topics, index_rate)
 
     chosen = unused[0]
     return chosen, topics
