@@ -31,6 +31,16 @@ class TopicQueueError(RuntimeError):
     pass
 
 
+class TopicsExhaustedError(TopicQueueError):
+    """未使用トピックがなく、自動リセットせず投稿をスキップすべき状態。
+
+    2026-07-24社長判断(論点15③): 枯渇時に全件へ自動リセットして再利用すると、
+    枯渇に気づかないまま既出テーマの記事が再生成され続ける恐れがあるため、
+    自動リセットは廃止し、呼び出し元(main.py)が明示的にスキップできるよう
+    この例外を送出する。
+    """
+
+
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
@@ -49,7 +59,7 @@ def save_topics(topics: list[dict[str, Any]]) -> None:
 
 
 def pick_topic(index_rate: float | None = None) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    """未使用トピックをキュー順(配列の先頭)で1件選ぶ。全件使用済みなら全件リセットしてから選ぶ。
+    """未使用トピックをキュー順(配列の先頭)で1件選ぶ。
 
     編集会議がトピックを配列の先頭へ移動させることで次回投稿を制御できるよう、
     ランダム選択ではなく配列順を尊重する(旧: random.choice(unused))。
@@ -58,21 +68,27 @@ def pick_topic(index_rate: float | None = None) -> tuple[dict[str, Any], list[di
     閾値未満なら、直近使用された記事型と異なるトピックのみに絞り込んでから
     配列先頭を選ぶ(sa_common.production_gate参照)。
 
+    2026-07-24社長判断(論点15③): 全件使用済みになっても自動リセットはしない。
+    `TopicsExhaustedError`を送出するので、呼び出し元(main.py)は編集会議での
+    トピック追加が必要な状態として投稿をスキップすること。
+
     Args:
         index_rate: 週次URL Inspection実測の自部署インデックス率(0.0〜1.0)。
             Noneの場合(週次検査未実施・取得失敗)は量産ゲートを効かせない。
 
     Returns: (選ばれたトピック, 全トピックリスト(まだ使用済みマーク前))
+
+    Raises:
+        TopicsExhaustedError: 未使用トピックが1件も無い場合。
     """
     topics = load_topics()
     unused = [t for t in topics if not t.get("used", False)]
 
     if not unused:
-        # 全て使い切った場合は再利用のため全件リセット(使用回数はカウントアップして残す)
-        for t in topics:
-            t["used"] = False
-            t["used_at"] = None
-        unused = topics
+        raise TopicsExhaustedError(
+            f"未使用トピックがありません(key={STATE_KEY})。編集会議でのトピック追加が"
+            "必要です(2026-07-24社長判断論点15③により、枯渇時の自動リセットは廃止)。"
+        )
 
     unused = filter_topics_by_gate(unused, topics, index_rate)
 

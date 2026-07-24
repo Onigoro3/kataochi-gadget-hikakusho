@@ -112,6 +112,12 @@ def main() -> int:
 
     try:
         topic, all_topics = topics.pick_topic(index_rate=index_rate)
+    except topics.TopicsExhaustedError as e:
+        print(
+            f"[main] {e}\n[main] 未使用トピックがないため、本日の投稿をスキップします"
+            "(エラーではありません。2026-07-24社長判断論点15③により自動リセットは廃止)。"
+        )
+        return 0
     except Exception as e:
         notify_failure("topic_selection", e)
         return 1
